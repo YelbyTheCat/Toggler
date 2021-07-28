@@ -23,15 +23,15 @@ public class toggle : EditorWindow
     bool startActiveVRC = true;
     bool startActiveUnity = false;
 
-    [MenuItem("Yelby/Toggles")]
+    [MenuItem("Yelby/Toggler")]
     public static void ShowWindow()
     {
-        GetWindow<toggle>("Toggles");
+        GetWindow<toggle>("Toggler");
     }
 
     private void OnGUI()
     {
-        GUILayout.Label("Version: 1.5");
+        GUILayout.Label("Version: 1.7");
 
         //Gather info
         avatar = EditorGUILayout.ObjectField("Avatar: ", avatar, typeof(GameObject), true) as GameObject;
@@ -114,6 +114,8 @@ public class toggle : EditorWindow
             path += avatar.name;
             Debug.Log("Folder: " + path + " created");
         }
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
     }
 
     private void CreateToggleAnimations(GameObject avatar, GameObject tObj)
@@ -155,20 +157,20 @@ public class toggle : EditorWindow
         string temp = "Assets/Yelby/Programs/Toggle/" + avatar.name + "/" + "test_OFF";
         AnimationClip test = AssetDatabase.LoadAssetAtPath(temp, typeof(AnimationClip)) as AnimationClip;
 
-        
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
     }
 
     private void AddAvatarParameters(ExpressionParameters tParams, GameObject tObj, bool saved, bool def)
     {
         //Check if parameter already exists
-        int size = tParams.parameters.Length;
         var paraName = tParams.parameters;
-        for(int i = 0; i < size; i++)
+        for(int i = 0; i < tParams.parameters.Length; i++)
         {
             if(tObj.name == paraName[i].name)
             {
                 Debug.LogWarning("Avatar Parameter: " + tObj.name + " already exists");
-                bool option = EditorUtility.DisplayDialog("Toggles", "Avatar Parameter " + tObj.name + " already exists. Override?", "Yes", "No");
+                bool option = EditorUtility.DisplayDialog("Toggler", "Avatar Parameter " + tObj.name + " already exists. Override?", "Yes", "No");
                 if (option)
                 {
                     paraName[i].valueType = ExpressionParameters.ValueType.Bool;
@@ -185,8 +187,8 @@ public class toggle : EditorWindow
         }
 
         //Add new Parameter
-        ExpressionParameter[] parameterArray = new ExpressionParameter[size + 1];
-        for (int i = 0; i < size; i++) //Copy parameter
+        ExpressionParameter[] parameterArray = new ExpressionParameter[tParams.parameters.Length + 1];
+        for (int i = 0; i < tParams.parameters.Length; i++) //Copy parameter
         {
             parameterArray[i] = tParams.parameters[i];
         }
@@ -200,14 +202,13 @@ public class toggle : EditorWindow
             parameter.defaultValue = 0.0f;
         parameter.valueType = ExpressionParameters.ValueType.Bool;
         parameter.saved = saved;
-        
 
         //Add to array and set back to orginal parameter
-        parameterArray[size] = parameter;
+        parameterArray[parameterArray.Length - 1] = parameter;
         tParams.parameters = parameterArray;
         Debug.Log("Avatar Parameter: " + tObj.name + " created");
 
-        //EditorUtility.SetDirty(parameters);
+        EditorUtility.SetDirty(parameters);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
     }
@@ -223,7 +224,7 @@ public class toggle : EditorWindow
             if(tObj.name == animParams[i].name)
             {
                 Debug.LogWarning("Layer Parameter: " + tObj.name + " already exists");
-                bool option = EditorUtility.DisplayDialog("Toggles", "Layer Parameter " + tObj.name + " already exists. Override?", "Yes", "No");
+                bool option = EditorUtility.DisplayDialog("Toggler", "Layer Parameter " + tObj.name + " already exists. Override?", "Yes", "No");
                 if (option)
                 {
                     tController.RemoveParameter(animParams[i]);
@@ -239,27 +240,28 @@ public class toggle : EditorWindow
         //If it doesn't exist, creates it
         tController.AddParameter(tObj.name, AnimatorControllerParameterType.Bool);
         Debug.Log("Layer Parameter: " + tObj.name + " created");
+        AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
     }
 
     private void AddLayer(AnimatorController tController, GameObject tObj)
     {
-        int size = tController.layers.Length;
+        //int size = tController.layers.Length;
         AnimatorControllerLayer[] animLayers = tController.layers;
 
         //Check list if a name exists
-        for (int i = 0; i < size; i++)
+        for (int i = 0; i < tController.layers.Length; i++)
         {
             if(tObj.name == animLayers[i].name)
             {
                 Debug.LogWarning("Layer: " + tObj.name + " already exists");
-                bool option = EditorUtility.DisplayDialog("Toggles", "Layer Name " + tObj.name + " already exists. Override?", "Yes", "No");
+                bool option = EditorUtility.DisplayDialog("Toggler", "Layer Name " + tObj.name + " already exists. Override?", "Yes", "No");
                 if(option)
                 {
                     tController.RemoveLayer(i);
                     tController.AddLayer(tObj.name);
                     animLayers = tController.layers;
-                    animLayers[i].defaultWeight = 1.0f;
+                    animLayers[tController.layers.Length-1].defaultWeight = 1.0f;
                     tController.layers = animLayers;
                     Debug.Log("Layer: " + tObj.name + " created");
                     AssetDatabase.Refresh();
@@ -275,9 +277,11 @@ public class toggle : EditorWindow
         //If it doesn't exist, creates it
         tController.AddLayer(tObj.name);
         animLayers = tController.layers;
-        animLayers[size].defaultWeight = 1.0f;
+        animLayers[tController.layers.Length-1].defaultWeight = 1.0f;
         tController.layers = animLayers;
         Debug.Log("Layer: " + tObj.name + " created");
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
     }
 
     private void FillLayer(GameObject avatar, AnimatorController tController, GameObject tObj, bool def)
@@ -289,6 +293,7 @@ public class toggle : EditorWindow
             if(tController.layers[i].name == tObj.name)
             {
                 tLayer = i;
+                break;
             }
         }
 
@@ -298,50 +303,83 @@ public class toggle : EditorWindow
 
         AnimatorState defState = new AnimatorState();
         AnimatorState tranState = new AnimatorState();
+        string tranMotionName = "";
 
         //Default State
         if (def)
         {
+            //OFF
             Motion defMotion = AssetDatabase.LoadAssetAtPath(path + "_OFF" + ".anim", typeof(AnimationClip)) as Motion;
-            
-            defState.name = defMotion.name;
-            defState.motion = defMotion;
-            defState.writeDefaultValues = false;
-            states.AddState(defState, new Vector3(300, 120));
+            states.AddState(defMotion.name, new Vector3(300, 120));
+            for (int i = 0; i < states.states.Length; i++)
+            {
+                if(states.states[i].state.name == defMotion.name)
+                {
+                    states.states[i].state.motion = defMotion;
+                    states.states[i].state.writeDefaultValues = false;
+                    defState = states.states[i].state;
+                    break;
+                }
+            }
 
-            //Transitioned to state
+            //ON
             Motion tranMotion = AssetDatabase.LoadAssetAtPath(path + "_ON" + ".anim", typeof(AnimationClip)) as Motion;
-            tranState.name = tranMotion.name;
-            tranState.motion = tranMotion;
-            tranState.writeDefaultValues = false;
-            states.AddState(tranState, new Vector3(300, 170));
+            tranMotionName = tranMotion.name;
+            states.AddState(tranMotion.name, new Vector3(300, 170));
+            for (int i = 0; i < states.states.Length; i++)
+            {
+                if (states.states[i].state.name == tranMotion.name)
+                {
+                    states.states[i].state.writeDefaultValues = false;
+                    states.states[i].state.motion = tranMotion;
+                    tranState = states.states[i].state;
+                    break;
+                }
+            }
         }
         else
         {
+            //OFF
             Motion defMotion = AssetDatabase.LoadAssetAtPath(path + "_ON" + ".anim", typeof(AnimationClip)) as Motion;
-            defState.name = defMotion.name;
-            defState.motion = defMotion;
-            defState.writeDefaultValues = false;
-            states.AddState(defState, new Vector3(300, 120));
+            states.AddState(defMotion.name, new Vector3(300, 120));
+            for (int i = 0; i < states.states.Length; i++)
+            {
+                if (states.states[i].state.name == defMotion.name)
+                {
+                    states.states[i].state.motion = defMotion;
+                    states.states[i].state.writeDefaultValues = false;
+                    defState = states.states[i].state;
+                    break;
+                }
+            }
 
-            //Transitioned to state
+            //ON
             Motion tranMotion = AssetDatabase.LoadAssetAtPath(path + "_OFF" + ".anim", typeof(AnimationClip)) as Motion;
-            tranState.name = tranMotion.name;
-            tranState.motion = tranMotion;
-            tranState.writeDefaultValues = false;
-            states.AddState(tranState, new Vector3(300, 170));
+            states.AddState(tranMotion.name, new Vector3(300, 170));
+            for (int i = 0; i < states.states.Length; i++)
+            {
+                if (states.states[i].state.name == tranMotion.name)
+                {
+                    states.states[i].state.writeDefaultValues = false;
+                    states.states[i].state.motion = tranMotion;
+                    tranState = states.states[i].state;
+                    break;
+                }
+            }
         }
-        
 
         //Other
         states.anyStatePosition = new Vector3(325, 0);
         states.entryPosition = new Vector3(325, 50);
         states.exitPosition = new Vector3(325, 240);
 
+        AssetDatabase.Refresh();
+
         //Transitions
         if(def)
         {
             AnimatorStateTransition defTransition = defState.AddTransition(tranState);
+            defState.AddTransition(defTransition);
             defTransition.hasExitTime = false;
             defTransition.duration = 0.0f;
             defTransition.AddCondition(AnimatorConditionMode.If, 0, tObj.name);
@@ -354,6 +392,7 @@ public class toggle : EditorWindow
         else
         {
             AnimatorStateTransition defTransition = defState.AddTransition(tranState);
+            defState.AddTransition(defTransition);
             defTransition.hasExitTime = false;
             defTransition.duration = 0.0f;
             defTransition.AddCondition(AnimatorConditionMode.IfNot, 0, tObj.name);
@@ -363,7 +402,8 @@ public class toggle : EditorWindow
             tranExit.duration = 0.0f;
             tranExit.AddCondition(AnimatorConditionMode.If, 0, tObj.name);
         }
-        
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
     }
 }
 #endif
