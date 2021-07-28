@@ -1,4 +1,4 @@
-﻿#if VRC_SDK_VRCSDK3
+#if VRC_SDK_VRCSDK3
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -31,32 +31,76 @@ public class toggle : EditorWindow
 
     private void OnGUI()
     {
-        GUILayout.Label("Version: 1.0");
+        GUILayout.Label("Version: 1.5");
 
+        //Gather info
         avatar = EditorGUILayout.ObjectField("Avatar: ", avatar, typeof(GameObject), true) as GameObject;
-        controller = EditorGUILayout.ObjectField("FX Controller: ", controller, typeof(AnimatorController), true) as AnimatorController;
-        parameters = EditorGUILayout.ObjectField("Parameters: ", parameters, typeof(ExpressionParameters), true) as ExpressionParameters;
-        obj = EditorGUILayout.ObjectField("Object: ", obj, typeof(GameObject), true) as GameObject;
-
-        //Make Toggle button
-        if (GUILayout.Button("Make Toggle"))
+        if(avatar != null)
         {
-            CreateFolders(avatar, obj);
-            CreateToggleAnimations(avatar, obj);
-            AddAvatarParameters(parameters, obj, saved, startActiveVRC);
-            AddParameter(controller, obj);
-            AddLayer(controller, obj);
-            FillLayer(avatar, controller, obj, startActiveVRC);
-            obj.SetActive(startActiveUnity);
-            Debug.Log("Finished");
+            var SDKRef = avatar.GetComponent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>();
+            if (SDKRef != null)
+            {
+                //Controller
+                if (SDKRef.baseAnimationLayers[4].animatorController != null)
+                {
+                    //controller = EditorGUILayout.ObjectField("FX Controller: ", controller, typeof(AnimatorController), true) as AnimatorController;
+                    controller = (AnimatorController)SDKRef.baseAnimationLayers[4].animatorController;
+                }
+                else
+                {
+                    controller = null;
+                    Debug.LogError("Missing FX Controller");
+                }
+                
+                //Parameter
+                if(SDKRef.expressionParameters != null)
+                {
+                    //parameters = EditorGUILayout.ObjectField("Parameters: ", parameters, typeof(ExpressionParameters), true) as ExpressionParameters;
+                    parameters = SDKRef.expressionParameters as ExpressionParameters;
+                }
+                else
+                {
+                    parameters = null;
+                    Debug.LogError("Missing Parameter on avatar");
+                }
+
+                //Object
+                obj = EditorGUILayout.ObjectField("Object: ", obj, typeof(GameObject), true) as GameObject;
+            }
+            else
+            {
+                avatar = null;
+            }
         }
 
+        //Options
         options = EditorGUILayout.Foldout(options, "Options");
-        if(options)
+        if (options)
         {
             saved = EditorGUILayout.Toggle("Saved", saved);
             startActiveVRC = EditorGUILayout.Toggle("Default ON", startActiveVRC);
             startActiveUnity = EditorGUILayout.Toggle("Unity ON", startActiveUnity);
+        }
+
+        //Make Toggle button
+        if (avatar != null && controller != null && parameters != null && obj != null)
+        {
+            if (GUILayout.Button("Make Toggle"))
+            {
+                CreateFolders(avatar, obj);
+                CreateToggleAnimations(avatar, obj);
+                AddAvatarParameters(parameters, obj, saved, startActiveVRC);
+                AddParameter(controller, obj);
+                AddLayer(controller, obj);
+                FillLayer(avatar, controller, obj, startActiveVRC);
+                obj.SetActive(startActiveUnity);
+                Debug.Log("Finished");
+            }
+        }
+        else
+        {
+            GUI.enabled = false;
+            GUILayout.Button("Make Toggle");
         }
     }
 
@@ -124,7 +168,19 @@ public class toggle : EditorWindow
             if(tObj.name == paraName[i].name)
             {
                 Debug.LogWarning("Avatar Parameter: " + tObj.name + " already exists");
-                return;
+                bool option = EditorUtility.DisplayDialog("Toggles", "Avatar Parameter " + tObj.name + " already exists. Override?", "Yes", "No");
+                if (option)
+                {
+                    paraName[i].valueType = ExpressionParameters.ValueType.Bool;
+                    paraName[i].saved = saved;
+                    if (def)
+                        paraName[i].defaultValue = 1.0f;
+                    else
+                        paraName[i].defaultValue = 0.0f;
+                    return;
+                }
+                else
+                    return;
             }
         }
 
@@ -142,8 +198,9 @@ public class toggle : EditorWindow
             parameter.defaultValue = 1.0f;
         else
             parameter.defaultValue = 0.0f;
-        parameter.saved = saved;
         parameter.valueType = ExpressionParameters.ValueType.Bool;
+        parameter.saved = saved;
+        
 
         //Add to array and set back to orginal parameter
         parameterArray[size] = parameter;
@@ -158,7 +215,6 @@ public class toggle : EditorWindow
     private void AddParameter(AnimatorController tController, GameObject tObj)
     {
         int size = tController.parameters.Length;
-        bool isNotThere = true;
         AnimatorControllerParameter[] animParams = tController.parameters;
         
         //Check list if a name exists
@@ -167,23 +223,28 @@ public class toggle : EditorWindow
             if(tObj.name == animParams[i].name)
             {
                 Debug.LogWarning("Layer Parameter: " + tObj.name + " already exists");
-                isNotThere = false;
-                return;
+                bool option = EditorUtility.DisplayDialog("Toggles", "Layer Parameter " + tObj.name + " already exists. Override?", "Yes", "No");
+                if (option)
+                {
+                    tController.RemoveParameter(animParams[i]);
+                    tController.AddParameter(tObj.name, AnimatorControllerParameterType.Bool);
+                    AssetDatabase.Refresh();
+                    return;
+                }
+                else
+                    return;
             }
         }
 
         //If it doesn't exist, creates it
-        if (isNotThere)
-        {
-            tController.AddParameter(tObj.name, AnimatorControllerParameterType.Bool);
-            Debug.Log("Layer Parameter: " + tObj.name + " created");
-        }
+        tController.AddParameter(tObj.name, AnimatorControllerParameterType.Bool);
+        Debug.Log("Layer Parameter: " + tObj.name + " created");
+        AssetDatabase.Refresh();
     }
 
     private void AddLayer(AnimatorController tController, GameObject tObj)
     {
         int size = tController.layers.Length;
-        bool isNotThere = true;
         AnimatorControllerLayer[] animLayers = tController.layers;
 
         //Check list if a name exists
@@ -192,20 +253,31 @@ public class toggle : EditorWindow
             if(tObj.name == animLayers[i].name)
             {
                 Debug.LogWarning("Layer: " + tObj.name + " already exists");
-                isNotThere = false;
-                return;
+                bool option = EditorUtility.DisplayDialog("Toggles", "Layer Name " + tObj.name + " already exists. Override?", "Yes", "No");
+                if(option)
+                {
+                    tController.RemoveLayer(i);
+                    tController.AddLayer(tObj.name);
+                    animLayers = tController.layers;
+                    animLayers[i].defaultWeight = 1.0f;
+                    tController.layers = animLayers;
+                    Debug.Log("Layer: " + tObj.name + " created");
+                    AssetDatabase.Refresh();
+                    return;
+                }
+                else
+                {
+                    return;
+                }
             }
         }
 
         //If it doesn't exist, creates it
-        if (isNotThere)
-        {
-            tController.AddLayer(tObj.name);
-            animLayers = tController.layers;
-            animLayers[size].defaultWeight = 1.0f;
-            tController.layers = animLayers;
-            Debug.Log("Layer: " + tObj.name + " created");
-        }
+        tController.AddLayer(tObj.name);
+        animLayers = tController.layers;
+        animLayers[size].defaultWeight = 1.0f;
+        tController.layers = animLayers;
+        Debug.Log("Layer: " + tObj.name + " created");
     }
 
     private void FillLayer(GameObject avatar, AnimatorController tController, GameObject tObj, bool def)
@@ -267,15 +339,31 @@ public class toggle : EditorWindow
         states.exitPosition = new Vector3(325, 240);
 
         //Transitions
-        AnimatorStateTransition defTransition = defState.AddTransition(tranState);
-        defTransition.hasExitTime = false;
-        defTransition.duration = 0.0f;
-        defTransition.AddCondition(AnimatorConditionMode.If, 0, tObj.name);
+        if(def)
+        {
+            AnimatorStateTransition defTransition = defState.AddTransition(tranState);
+            defTransition.hasExitTime = false;
+            defTransition.duration = 0.0f;
+            defTransition.AddCondition(AnimatorConditionMode.If, 0, tObj.name);
 
-        AnimatorStateTransition tranExit = tranState.AddExitTransition();
-        tranExit.hasExitTime = false;
-        tranExit.duration = 0.0f;
-        tranExit.AddCondition(AnimatorConditionMode.IfNot, 0, tObj.name);
+            AnimatorStateTransition tranExit = tranState.AddExitTransition();
+            tranExit.hasExitTime = false;
+            tranExit.duration = 0.0f;
+            tranExit.AddCondition(AnimatorConditionMode.IfNot, 0, tObj.name);
+        }
+        else
+        {
+            AnimatorStateTransition defTransition = defState.AddTransition(tranState);
+            defTransition.hasExitTime = false;
+            defTransition.duration = 0.0f;
+            defTransition.AddCondition(AnimatorConditionMode.IfNot, 0, tObj.name);
+
+            AnimatorStateTransition tranExit = tranState.AddExitTransition();
+            tranExit.hasExitTime = false;
+            tranExit.duration = 0.0f;
+            tranExit.AddCondition(AnimatorConditionMode.If, 0, tObj.name);
+        }
+        
     }
 }
 #endif
