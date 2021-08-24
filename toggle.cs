@@ -11,6 +11,8 @@ using UnityEditor.Animations;
 
 public class toggle : EditorWindow
 {
+    //Created by Yelby
+
     //Attributes
     GameObject avatar;
     AnimatorController controller;
@@ -39,7 +41,7 @@ public class toggle : EditorWindow
 
     private void OnGUI()
     {
-        GUILayout.Label("Version: 1.8");
+        GUILayout.Label("Version: 1.9");
 
         toolBar = GUILayout.Toolbar(toolBar, toolBarSections);
 
@@ -103,7 +105,7 @@ public class toggle : EditorWindow
                         CreateToggleAnimations(avatar, obj);
                         AddAvatarParameters(parameters, obj, saved, startActiveVRC);
                         AddParameter(controller, obj);
-                        AddLayer(controller, obj);
+                        AddLayer(avatar, controller, obj);
                         FillLayer(avatar, controller, obj, startActiveVRC);
                         obj.SetActive(startActiveUnity);
                         Debug.Log("Finished");
@@ -172,9 +174,9 @@ public class toggle : EditorWindow
                         objs = removeNull(objs);
                         CreateFolders(avatar, outfitName);
                         CreateToggleAnimations(avatar, objs, objsToggleAnimation ,outfitName);
-                        AddAvatarParameters(parameters, outfitName, true);
+                        AddAvatarParameters(parameters, outfitName, saved);
                         AddParameter(controller, outfitName);
-                        AddLayer(controller, outfitName);
+                        AddLayer(avatar, controller, outfitName);
                         FillLayer(avatar, controller, objs, outfitName, objsToggleAnimation);
                         SetActive(objs, objsToggleUnity);
                         Debug.Log("Finished");
@@ -303,7 +305,7 @@ public class toggle : EditorWindow
         AssetDatabase.Refresh();
     }
 
-    private void AddLayer(AnimatorController tController, GameObject tObj)
+    private void AddLayer(GameObject avatar, AnimatorController tController, GameObject tObj)
     {
         //int size = tController.layers.Length;
         AnimatorControllerLayer[] animLayers = tController.layers;
@@ -321,6 +323,7 @@ public class toggle : EditorWindow
                     tController.AddLayer(tObj.name);
                     animLayers = tController.layers;
                     animLayers[tController.layers.Length-1].defaultWeight = 1.0f;
+                    animLayers[tController.layers.Length - 1].avatarMask = CreateEmptyMask(avatar, "Assets/Yelby/Programs/Toggle/" + avatar.name);
                     tController.layers = animLayers;
                     Debug.Log("Layer: " + tObj.name + " created");
                     AssetDatabase.Refresh();
@@ -336,7 +339,8 @@ public class toggle : EditorWindow
         //If it doesn't exist, creates it
         tController.AddLayer(tObj.name);
         animLayers = tController.layers;
-        animLayers[tController.layers.Length-1].defaultWeight = 1.0f;
+        animLayers[tController.layers.Length - 1].defaultWeight = 1.0f;
+        animLayers[tController.layers.Length - 1].avatarMask = CreateEmptyMask(avatar, "Assets/Yelby/Programs/Toggle/" + avatar.name);
         tController.layers = animLayers;
         Debug.Log("Layer: " + tObj.name + " created");
         AssetDatabase.SaveAssets();
@@ -422,8 +426,6 @@ public class toggle : EditorWindow
         {
             createAnimation(path, tObjs[i], tObjs, true);
             createAnimation(path, tObjs[i], tObjs, false);
-            //createAnimation(path, tObjs[i], true);
-            //createAnimation(path, tObjs[i], false);
         }
 
         AssetDatabase.SaveAssets();
@@ -507,7 +509,7 @@ public class toggle : EditorWindow
         AssetDatabase.Refresh();
     }
 
-    private void AddLayer(AnimatorController tController, string outfitName)
+    private void AddLayer(GameObject avatar, AnimatorController tController, string outfitName)
     {
         //int size = tController.layers.Length;
         AnimatorControllerLayer[] animLayers = tController.layers;
@@ -525,7 +527,9 @@ public class toggle : EditorWindow
                     tController.AddLayer(outfitName);
                     animLayers = tController.layers;
                     animLayers[tController.layers.Length - 1].defaultWeight = 1.0f;
+                    animLayers[tController.layers.Length - 1].avatarMask = CreateEmptyMask(avatar, "Assets/Yelby/Programs/Toggle/" + avatar.name);
                     tController.layers = animLayers;
+                    CreateEmptyMask(avatar, "Assets/Yelby/Programs/Toggle/" + avatar.name);
                     Debug.Log("Layer: " + outfitName + " created");
                     AssetDatabase.Refresh();
                     return;
@@ -541,6 +545,7 @@ public class toggle : EditorWindow
         tController.AddLayer(outfitName);
         animLayers = tController.layers;
         animLayers[tController.layers.Length - 1].defaultWeight = 1.0f;
+        animLayers[tController.layers.Length - 1].avatarMask = CreateEmptyMask(avatar, "Assets/Yelby/Programs/Toggle/" + avatar.name);
         tController.layers = animLayers;
         Debug.Log("Layer: " + outfitName + " created");
         AssetDatabase.SaveAssets();
@@ -736,6 +741,22 @@ public class toggle : EditorWindow
             }
         }
         return list;
+    }
+
+    private AvatarMask CreateEmptyMask(GameObject avatar, string filepath)
+    {
+        AvatarMask mask = AssetDatabase.LoadAssetAtPath(filepath + "/" + avatar.name + "_EMPTY" + ".mask", typeof(AvatarMask)) as AvatarMask;
+        if (mask != null)
+            return mask;
+        else
+            mask = new AvatarMask();
+        for (int i = 0; i < mask.humanoidBodyPartCount; i++)
+            mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)i, false);
+
+        Debug.LogError("I was Summoned!");
+
+        AssetDatabase.CreateAsset(mask, filepath + "/" + avatar.name + "_EMPTY" + ".mask");
+        return mask;
     }
 }
 #endif
