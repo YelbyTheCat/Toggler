@@ -41,7 +41,7 @@ public class toggle : EditorWindow
 
     private void OnGUI()
     {
-        GUILayout.Label("Version: 1.9");
+        GUILayout.Label("Version: 2.0");
 
         toolBar = GUILayout.Toolbar(toolBar, toolBarSections);
 
@@ -391,18 +391,21 @@ public class toggle : EditorWindow
     private void CreateFolders(GameObject avatar, string outfitName)
     {
         string path = "Assets/Yelby/Programs/Toggle";
+
+        //Checks for avatar Folder
         if (!AssetDatabase.IsValidFolder(path + "/" + avatar.name))
         {
             AssetDatabase.CreateFolder(path, avatar.name);
-            path += avatar.name;
-            Debug.Log("Folder: " + path + " created");
+            Debug.Log("Folder: " + path + "/" + avatar.name + " created");
         }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
 
         if (!AssetDatabase.IsValidFolder(path + "/" + avatar.name + "/" + outfitName))
         {
             AssetDatabase.CreateFolder(path + "/" + avatar.name, outfitName);
-            path += "/" + outfitName;
-            Debug.Log("Folder: " + path + " created");
+            Debug.Log("Folder: " + path + "/" + avatar.name + "/" + outfitName + " created");
         }
 
         AssetDatabase.SaveAssets();
@@ -529,7 +532,6 @@ public class toggle : EditorWindow
                     animLayers[tController.layers.Length - 1].defaultWeight = 1.0f;
                     animLayers[tController.layers.Length - 1].avatarMask = CreateEmptyMask(avatar, "Assets/Yelby/Programs/Toggle/" + avatar.name);
                     tController.layers = animLayers;
-                    CreateEmptyMask(avatar, "Assets/Yelby/Programs/Toggle/" + avatar.name);
                     Debug.Log("Layer: " + outfitName + " created");
                     AssetDatabase.Refresh();
                     return;
@@ -750,13 +752,49 @@ public class toggle : EditorWindow
             return mask;
         else
             mask = new AvatarMask();
+
+        SkeletonBone[] skeleton = avatar.GetComponent<Animator>().avatar.humanDescription.skeleton;
+
+        List<Transform> boneTransforms = new List<Transform>();
+        boneTransforms = GetAllTransforms(avatar.transform);
+
+        for(int i = 0; i < skeleton.Length; i++)
+        {
+            for (int j = 0; j < boneTransforms.Count; j++)
+            {
+                if(boneTransforms[j].name == skeleton[i].name)
+                {
+                    mask.AddTransformPath(boneTransforms[j], false);
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < mask.transformCount; i++)
+            mask.SetTransformActive(i, false);
+
         for (int i = 0; i < mask.humanoidBodyPartCount; i++)
             mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)i, false);
 
-        Debug.LogError("I was Summoned!");
-
         AssetDatabase.CreateAsset(mask, filepath + "/" + avatar.name + "_EMPTY" + ".mask");
         return mask;
+    }
+
+    private List<Transform> GetAllTransforms(Transform parent)
+    {
+        var transformList = new List<Transform>();
+        BuildTransformList(transformList, parent);
+        return transformList;
+    }
+
+    private static void BuildTransformList(ICollection<Transform> transforms, Transform parent)
+    {
+        if (parent == null) { return; }
+        foreach (Transform t in parent)
+        {
+            transforms.Add(t);
+            BuildTransformList(transforms, t);
+        }
     }
 }
 #endif
