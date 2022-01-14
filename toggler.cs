@@ -20,6 +20,8 @@ public class toggler : EditorWindow
     AnimatorController controller;
     ExpressionParameters parameters;
     GameObject obj;
+    GameObject obj2;
+    bool swap = false;
     List<GameObject> objs = new List<GameObject>();
     List<bool> objsToggleAnimation = new List<bool>();
     List<bool> objsToggleUnity = new List<bool>();
@@ -37,7 +39,6 @@ public class toggler : EditorWindow
     List<OutfitInventory> outfitList = new List<OutfitInventory>();
     List<string> motionPaths = new List<string>();
     Vector2 scrollPose;
-    float windowWidth;
     VRCMenu characterMenu;
     //GameObject tempObject;
 
@@ -53,8 +54,7 @@ public class toggler : EditorWindow
 
     private void OnGUI()
     {
-        windowWidth = position.size.x;
-        GUILayout.Label("Version: 2.1");
+        GUILayout.Label("Version: 2.2");
 
         toolBar = GUILayout.Toolbar(toolBar, toolBarSections);
 
@@ -100,15 +100,28 @@ public class toggler : EditorWindow
             case 0:
                 //Object
                 obj = EditorGUILayout.ObjectField("Object: ", obj, typeof(GameObject), true) as GameObject;
+                if(swap)
+                {
+                    obj2 = EditorGUILayout.ObjectField("Object 2: ", obj2, typeof(GameObject), true) as GameObject;
+                    if (obj == obj2)
+                    {
+                        obj2 = null;
+                    }
+                }
                 //Options
                 options = EditorGUILayout.Foldout(options, "Options");
                 if (options)
                 {
+                    swap = EditorGUILayout.Toggle("Swap Mode", swap);
                     saved = EditorGUILayout.Toggle("Saved", saved);
-                    startActiveVRC = EditorGUILayout.Toggle("Default ON", startActiveVRC);
-                    startActiveUnity = EditorGUILayout.Toggle("Unity ON", startActiveUnity);
                     writeDefaults = EditorGUILayout.Toggle("Write Defaults", writeDefaults);
                     addMask = EditorGUILayout.Toggle("Add Layer Mask", addMask);
+
+                    if(!swap)
+                    {
+                        startActiveVRC = EditorGUILayout.Toggle("Default ON", startActiveVRC);
+                        startActiveUnity = EditorGUILayout.Toggle("Unity ON", startActiveUnity);
+                    }
                 }
 
                 //Make Toggle button
@@ -117,12 +130,30 @@ public class toggler : EditorWindow
                     if (GUILayout.Button("Make Toggle"))
                     {
                         CreateFolders(avatar, obj);
-                        CreateToggleAnimations(avatar, obj);
+
+                        if (swap)
+                        {
+                            CreateToggleAnimations(avatar, obj, obj2);
+                        }
+                        else
+                        {
+                            CreateToggleAnimations(avatar, obj);
+                        }
+
                         AddAvatarParameters(parameters, obj, saved, startActiveVRC);
                         AddParameter(controller, obj);
                         AddLayer(avatar, controller, obj);
-                        FillLayer(avatar, controller, obj, startActiveVRC);
-                        obj.SetActive(startActiveUnity);
+
+                        if(swap)
+                        {
+                            FillLayer(avatar, controller, obj, obj2);
+                            obj2.SetActive(false);
+                        }
+                        else
+                        {
+                            FillLayer(avatar, controller, obj, startActiveVRC);
+                            obj.SetActive(startActiveUnity);
+                        }
                         Debug.Log("Finished");
                     }
                 }
@@ -432,6 +463,57 @@ public class toggler : EditorWindow
         AssetDatabase.Refresh();
     }
 
+    //Swap
+    private void CreateToggleAnimations(GameObject avatar, GameObject obj, GameObject obj2)
+    {
+        string path = "Assets/Yelby/Programs/Toggle/" + avatar.name;
+        if (!AssetDatabase.IsValidFolder(path))
+        {
+            Debug.LogError(path + " not available");
+            return;
+        }
+
+        createAnimation(path, obj, obj2, true);
+        createAnimation(path, obj, obj2, false);
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+    }
+    
+    private void FillLayer(GameObject avatar, AnimatorController controller, GameObject obj, GameObject obj2)
+    {
+        string path = "Assets/Yelby/Programs/Toggle/" + avatar.name + "/";
+        int layerLocation = layerIndex(controller.layers, obj.name);
+        if (layerLocation == -1)
+        {
+            Debug.LogWarning("Layer Doesn't Exist");
+            return;
+        }
+
+        //Default Modules
+        AnimatorStateMachine states = controller.layers[layerLocation].stateMachine;
+        states.anyStatePosition = new Vector3(0, 0);
+        states.entryPosition = new Vector3(0, 50);
+        states.exitPosition = new Vector3(0, 240);
+
+        //Get Animations
+        Motion defaultAnimation = AssetDatabase.LoadAssetAtPath(path + obj.name + "_ON.anim", typeof(AnimationClip)) as Motion;
+        Motion swapAnimation = AssetDatabase.LoadAssetAtPath(path + obj2.name + "_ON.anim", typeof(AnimationClip)) as Motion;
+
+        //Create States
+        Vector3 location = new Vector3(-20, 120);
+        AnimatorState defaultState = createState(defaultAnimation, states, location);
+        location[1] += 50;
+        AnimatorState swapState = createState(swapAnimation, states, location);
+
+        //Transitions
+        createTransition(defaultState, swapState, false, 0.0f, AnimatorConditionMode.If, 0, obj);
+        createTransition(swapState, false, 0, AnimatorConditionMode.IfNot, 0, obj);
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+    }
+    
     /*Any*/
     private void CreateFolders(GameObject avatar, string outfitName)
     {
@@ -1117,6 +1199,35 @@ public class toggler : EditorWindow
         path.Add(filePath + currentOutfit + "/" + currentOutfit + "_" + parameter + ".anim");
     }
 
+    /*Creates a swap animation*/
+    private void createAnimation(string path, GameObject obj, GameObject obj2, bool toggle)
+    {
+        AnimationClip clip = new AnimationClip();
+        clip.legacy = false;
+        Keyframe[] key = new Keyframe[1];
+        AnimationCurve curve;
+
+        string objectPath = getObjectPath(obj);
+        string objectPath2 = getObjectPath(obj2);
+
+        key[0] = new Keyframe(0.0f, (toggle ? 1.0f : 0.0f));
+        curve = new AnimationCurve(key);
+        clip.SetCurve(objectPath, typeof(GameObject), "m_IsActive", curve);
+
+        key[0] = new Keyframe(0.0f, (toggle ? 0.0f : 1.0f));
+        curve = new AnimationCurve(key);
+        clip.SetCurve(objectPath2, typeof(GameObject), "m_IsActive", curve);
+
+        AssetDatabase.CreateAsset(clip, path + "/" + (toggle ? obj.name : obj2.name) + "_ON" + ".anim");
+    }
+
+    private string getObjectPath(GameObject obj)
+    {
+        string objectPath = obj.transform.GetHierarchyPath(null);
+        objectPath = objectPath.Substring(avatar.name.Length + 1, objectPath.Length - avatar.name.Length - 1);
+        return objectPath;
+    }
+
     private AnimatorState createState(Motion motion, AnimatorStateMachine stateMachine, Vector3 location)
     {
         stateMachine.AddState(motion.name, location);
@@ -1265,6 +1376,14 @@ public class toggler : EditorWindow
             if (layers[i].name == layerName)
                 return true;
         return false;
+    }
+
+    private int layerIndex(AnimatorControllerLayer[] layers, string layerName)
+    {
+        for (int i = 0; i < layers.Length; i++)
+            if (layers[i].name == layerName)
+                return i;
+        return -1;
     }
 
     private bool ParameterExists(AnimatorControllerParameter[] parameters, string parameterName)
