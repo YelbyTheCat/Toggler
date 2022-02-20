@@ -71,4 +71,4 @@ For this button to be 'live' the following is required:
  - Objects in the list (Suggestion: At least 2)
 ## Known Issues
  - Having an extra space on the end of your AVATAR name will cause it to fail (IE |yelby | will fail |yelby| will work, ignore |)
- - Having any of the following will cause creation to fail **'/'**, **'\'**, **'|'**, **'.'**, **'?'**, **'*'**, **':'**, **'"'**, **'<'**, **'>'**
+ - Having any of the following will cause creation to fail / \ . ? * : " < >
