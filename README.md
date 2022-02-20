@@ -1,8 +1,8 @@
 # Toggler
 
-Creates animations for Bool and int types.
-Adds to parameters based on object name
-Adds to FX layer
+Creates animations for Bool and int types.</br>
+Adds to parameters based on object name</br>
+Adds to FX layer</br>
 
 ## Simple
 ### Standard
