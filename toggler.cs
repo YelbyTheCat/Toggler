@@ -44,7 +44,7 @@ public class toggler : EditorWindow
 
     //Toolbar
     int toolBar = 0;
-    string[] toolBarSections = { "Simple", "Any", /*"Outfits"*/ };
+    string[] toolBarSections = { "Simple", "Any",/* "Outfits" */};
 
     [MenuItem("Yelby/Toggler")]
     public static void ShowWindow()
@@ -54,7 +54,7 @@ public class toggler : EditorWindow
 
     private void OnGUI()
     {
-        GUILayout.Label("Version: 2.2");
+        GUILayout.Label("Version: 2.3");
 
         toolBar = GUILayout.Toolbar(toolBar, toolBarSections);
 
@@ -65,6 +65,7 @@ public class toggler : EditorWindow
             var SDKRef = avatar.GetComponent<Descriptor>();
             if (SDKRef != null)
             {
+                avatar.name = avatar.name.Trim();
                 //Controller
                 if (SDKRef.baseAnimationLayers[4].animatorController != null)
                 {
@@ -442,17 +443,17 @@ public class toggler : EditorWindow
         Vector3 location = new Vector3(-20, 120);
 
         //Start
-        Motion defMotion = AssetDatabase.LoadAssetAtPath(path + (def ? "_OFF" : "_ON") + ".anim", typeof(AnimationClip)) as Motion;
+        Motion defMotion = AssetDatabase.LoadAssetAtPath(path + (!def ? "_OFF" : "_ON") + ".anim", typeof(AnimationClip)) as Motion;
         AnimatorState defState = createState(defMotion, states, location);
 
         //End
-        Motion tranMotion = AssetDatabase.LoadAssetAtPath(path + (def ? "_ON" : "_OFF") + ".anim", typeof(AnimationClip)) as Motion;
+        Motion tranMotion = AssetDatabase.LoadAssetAtPath(path + (!def ? "_ON" : "_OFF") + ".anim", typeof(AnimationClip)) as Motion;
         location[1] += 50;
         AnimatorState tranState = createState(tranMotion, states, location);
 
         //Transitions
-        createTransition(defState, tranState, false, 0.0f, (def ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot), 0, tObj);
-        createTransition(tranState, false, 0, (def ? AnimatorConditionMode.IfNot : AnimatorConditionMode.If), 0, tObj);
+        createTransition(defState, tranState, false, 0.0f, (!def ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot), 0, tObj);
+        createTransition(tranState, false, 0, (!def ? AnimatorConditionMode.IfNot : AnimatorConditionMode.If), 0, tObj);
 
         //Other
         states.anyStatePosition = new Vector3(0, 0);
