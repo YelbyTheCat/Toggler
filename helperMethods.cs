@@ -129,20 +129,31 @@ public class helperMethods
     }
 
     // Create FX Parameter
-    public static void createFXParameter(AnimatorController controllerFX, string parameterName, string type)
+    public static void createFXParameter(AnimatorController controllerFX, bool isDefault, string parameterName, string type)
     {
         // Set type
-        var valueType = AnimatorControllerParameterType.Bool;
+        AnimatorControllerParameter newParameter = new AnimatorControllerParameter();
+        newParameter.name = parameterName;
+        //var valueType = AnimatorControllerParameterType.Bool;
         switch (type)
         {
             case "int":
-                valueType = AnimatorControllerParameterType.Int;
+                //valueType = AnimatorControllerParameterType.Int;
+                newParameter.type = AnimatorControllerParameterType.Int;
+                newParameter.defaultInt = 0;
                 break;
             case "float":
-                valueType = AnimatorControllerParameterType.Float;
+                //valueType = AnimatorControllerParameterType.Float;
+                newParameter.type = AnimatorControllerParameterType.Float;
+                newParameter.defaultFloat = 0;
                 break;
             case "trigger":
-                valueType = AnimatorControllerParameterType.Trigger;
+                //valueType = AnimatorControllerParameterType.Trigger;
+                newParameter.type = AnimatorControllerParameterType.Trigger;
+                break;
+            case "bool":
+                newParameter.type = AnimatorControllerParameterType.Bool;
+                newParameter.defaultBool = isDefault;
                 break;
         }
 
@@ -150,17 +161,15 @@ public class helperMethods
         var parameter = controllerFX.parameters;
         for(int i = 0; i < parameter.Length; i++)
         {
-            if (parameter[i].name == parameterName && parameter[i].type != valueType)
+            if (parameter[i].name == parameterName)
             {
                 controllerFX.RemoveParameter(parameter[i]);
                 break;
             }
-            else if (parameter[i].name == parameterName && parameter[i].type == valueType)
-                return;
         }
 
         //Add in
-        controllerFX.AddParameter(parameterName, valueType);
+        controllerFX.AddParameter(newParameter);
     }
 
     // Create FX Layer
