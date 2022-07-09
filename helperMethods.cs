@@ -104,7 +104,7 @@ public class helperMethods
             if(currentParameter.name == parameterName)
             {
                 currentParameter.valueType = valueType;
-                currentParameter.defaultValue = parameterDefaultValue;
+                currentParameter.defaultValue = (type == "int" || type == "float" ? 0 : parameterDefaultValue);
                 currentParameter.saved = save;
                 return;
             }
@@ -121,7 +121,7 @@ public class helperMethods
             name = parameterName,
             valueType = valueType,
             saved = save,
-            defaultValue = parameterDefaultValue
+            defaultValue = (type == "int" || type == "float" ? 0 : parameterDefaultValue)
         };
 
         parameters.parameters = tempParameters;
