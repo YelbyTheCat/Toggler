@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
@@ -12,6 +11,8 @@ public class helperMethods
     // Ceate Animations
     public static void createAnimation(string filePath)
     {
+        var empty = AssetDatabase.LoadAssetAtPath(filePath + "/EMPTY.anim", typeof(AnimationClip)) as Motion;
+        if (empty != null) return;
         Keyframe[] keys = new Keyframe[1];
         AnimationCurve curve;
         string objectPath = "EMPTYFORREASONS";
