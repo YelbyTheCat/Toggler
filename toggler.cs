@@ -50,11 +50,11 @@ public class toggler : EditorWindow
     int activeIndex = -1;
 
     [MenuItem("Yelby/Toggler")]
-    public static void ShowWindow() { GetWindow<toggler>("Toggler 3.1.1"); }
+    public static void ShowWindow() { GetWindow<toggler>("Toggler 3.1.2"); }
 
     private void OnGUI()
     {
-        GUILayout.Label("Version: 3.1.1");
+        GUILayout.Label("Version: 3.1.2");
 
         toolBar = GUILayout.Toolbar(toolBar, toolBarSections);
 
