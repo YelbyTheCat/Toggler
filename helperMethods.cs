@@ -8,7 +8,7 @@ using UnityEditor.Animations;
 
 public class helperMethods
 {
-    // Ceate Animations
+    // Create Animations
     public static void createAnimation(string filePath)
     {
         var empty = AssetDatabase.LoadAssetAtPath(filePath + "/EMPTY.anim", typeof(AnimationClip)) as Motion;
@@ -26,26 +26,79 @@ public class helperMethods
         AssetDatabase.CreateAsset(clip, filePath + "/" + "EMPTY" + ".anim");
     }
 
-    public static void createAnimation(string avatarName, List<ObjectInformation> objectsList, string parameterName, string type, string filePath)
+    public static void createAnimation(string avatarName, List<ObjectInformation> objectsList, string parameterName, string type, string filePath, bool dissolve)
     {
         // Create Simple toggle
-        if(objectsList.Count == 1)
+        if (objectsList.Count == 1)
         {
             GameObject item = objectsList[0].item;
             filePath += "/" + avatarName + "/" + type;
-            bool toggle = true;
-            for(int i = 0; i < 2; i++)
+
+            if (dissolve)
             {
-                Keyframe[] keys = new Keyframe[1];
-                AnimationCurve curve;
+                bool toggle = true;
                 string objectPath = getObjectPath(avatarName, item);
-                AnimationClip clip = new AnimationClip();
-                clip.legacy = false;
-                keys[0] = new Keyframe(0.0f, (toggle ? 1.0f : 0.0f));
-                curve = new AnimationCurve(keys);
-                clip.SetCurve(objectPath, typeof(GameObject), "m_IsActive", curve);
-                AssetDatabase.CreateAsset(clip, filePath + "/" + item.name + (toggle ? "_ON" : "_OFF") + ".anim");
-                toggle = !toggle;
+                for (int i = 0; i < 2; i++)
+                {
+                    // Start
+                    AnimationClip clip = new AnimationClip { legacy = false };
+
+                    // Toggle
+                    Keyframe[] toggleKeys = new Keyframe[2];
+                    toggleKeys[0] = new Keyframe(0.0f, 1.0f);
+                    toggleKeys[1] = new Keyframe(1.0f, (toggle ? 1.0f : 0.0f));
+                    clip.SetCurve(objectPath, typeof(GameObject), "m_IsActive", new AnimationCurve(toggleKeys));
+
+                    // Dissolve
+                    Keyframe[] dissolveKeys = new Keyframe[2];
+                    dissolveKeys[0] = new Keyframe(0.0f, (toggle ? 1.0f : 0.0f));
+                    dissolveKeys[1] = new Keyframe(1.0f, (toggle ? 0.0f : 1.0f));
+                    clip.SetCurve(objectPath, typeof(MeshRenderer), "material._DissolveAlpha", new AnimationCurve(dissolveKeys));
+
+                    // End
+                    AssetDatabase.CreateAsset(clip, filePath + "/Dissolve_" + item.name + (toggle ? "_IN" : "_OUT") + ".anim");
+                    toggle = !toggle;
+                }
+
+                // Initial States
+                toggle = true;
+                for (int i = 0; i < 2;i++)
+                {
+                    // Start
+                    AnimationClip clip = new AnimationClip { legacy = false };
+
+                    // Toggle
+                    Keyframe[] toggleKeys = new Keyframe[1];
+                    toggleKeys[0] = new Keyframe(0.0f, toggle ? 1.0f : 0.0f);
+                    clip.SetCurve(objectPath, typeof(GameObject), "m_IsActive", new AnimationCurve(toggleKeys));
+
+                    // Dissolve
+                    // Dissolve
+                    Keyframe[] dissolveKeys = new Keyframe[2];
+                    dissolveKeys[0] = new Keyframe(0.0f, toggle ? 0.0f : 1.0f);
+                    clip.SetCurve(objectPath, typeof(MeshRenderer), "material._DissolveAlpha", new AnimationCurve(dissolveKeys));
+
+                    // End
+                    AssetDatabase.CreateAsset(clip, filePath + "/Dissolve_Initial_" + item.name + (toggle ? "_IN" : "_OUT") + ".anim");
+                    toggle = !toggle;
+                }
+            }
+            else
+            {
+                bool toggle = true;
+                for (int i = 0; i < 2; i++)
+                {
+                    Keyframe[] keys = new Keyframe[1];
+                    AnimationCurve curve;
+                    string objectPath = getObjectPath(avatarName, item);
+                    AnimationClip clip = new AnimationClip();
+                    clip.legacy = false;
+                    keys[0] = new Keyframe(0.0f, (toggle ? 1.0f : 0.0f));
+                    curve = new AnimationCurve(keys);
+                    clip.SetCurve(objectPath, typeof(GameObject), "m_IsActive", curve);
+                    AssetDatabase.CreateAsset(clip, filePath + "/" + item.name + (toggle ? "_ON" : "_OFF") + ".anim");
+                    toggle = !toggle;
+                }
             }
             return;
         }
@@ -196,7 +249,7 @@ public class helperMethods
     }
 
     // Fill FX Layers
-    public static void fillFXLayer(string avatarName, AnimatorController controllerFX, string parameterName, List<ObjectInformation> objectsList, bool defaultState, string type, bool writeDefaults, string filePath)
+    public static void fillFXLayer(string avatarName, AnimatorController controllerFX, string parameterName, List<ObjectInformation> objectsList, bool defaultState, string type, bool writeDefaults, string filePath, bool dissolve)
     {
         // Get layer index
         int layerIndex = getLayerIndex(controllerFX.layers, parameterName);
@@ -219,6 +272,61 @@ public class helperMethods
         // Create nodes
         Motion motion = null;
         string path = filePath + "/" + avatarName + "/" + type + "/";
+
+        // Simple Toggle Dissolve
+        if (type == "bool" && objectsList.Count == 1)
+        {
+            stateMachine.anyStatePosition = new Vector3(50, 80);
+            stateMachine.entryPosition = new Vector3(50, 120);
+            stateMachine.exitPosition = new Vector3(50, 160);
+
+            string emptyLocation = filePath + "/" + avatarName + "/";
+            string objectName = objectsList[0].item.name;
+
+            // Wait
+            motion = AssetDatabase.LoadAssetAtPath(emptyLocation + "EMPTY.anim", typeof(AnimationClip)) as Motion;
+            if (motion == null) { Debug.LogError("Failed to fetch EMPTY"); return; }
+            AnimatorState waitNode = createNode(motion, stateMachine, new Vector3(250, 120, 0), writeDefaults);
+
+            // Initial State ON
+            motion = AssetDatabase.LoadAssetAtPath(path + "Dissolve_Initial_" + objectName + "_IN.anim", typeof(AnimationClip)) as Motion;
+            if (motion == null) { Debug.LogError("Failed to fetch Dissolve Initial IN"); return; }
+            AnimatorState initialIn = createNode(motion, stateMachine, new Vector3(250, 40, 0), writeDefaults);
+
+            // Initial State OFF
+            motion = AssetDatabase.LoadAssetAtPath(path + "Dissolve_Initial_" + objectName + "_OUT.anim", typeof(AnimationClip)) as Motion;
+            if (motion == null) { Debug.LogError("Failed to fetch Dissolve initial OUT"); return; }
+            AnimatorState initialOut = createNode(motion, stateMachine, new Vector3(250, 200, 0), writeDefaults);
+
+            // Dissolve IN
+            motion = AssetDatabase.LoadAssetAtPath(path + "Dissolve_" + objectName + "_IN.anim", typeof(AnimationClip)) as Motion;
+            if (motion == null) { Debug.LogError("Failed to fetch Dissolve IN"); return; }
+            AnimatorState dissolveIn = createNode(motion, stateMachine, new Vector3(490, 80, 0), writeDefaults);
+
+            // Dissolve OFF_Cube_IN
+            motion = AssetDatabase.LoadAssetAtPath(path + "Dissolve_" + objectName + "_OUT.anim", typeof(AnimationClip)) as Motion;
+            if (motion == null) { Debug.LogError("Failed to fetch Dissolve OUT"); return; }
+            AnimatorState dissolveOut = createNode(motion, stateMachine, new Vector3(490, 160, 0), writeDefaults);
+
+            // Transitions
+
+            // Wait to initials
+            createTransition(waitNode, initialIn, defaultState ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot, defaultState, parameterName);
+            createTransition(waitNode, initialOut, defaultState ? AnimatorConditionMode.IfNot : AnimatorConditionMode.If, defaultState, parameterName);
+
+            // Initial IN to Dissolve OUT
+            createTransition(initialIn, dissolveOut, defaultState ? AnimatorConditionMode.IfNot : AnimatorConditionMode.If, defaultState, parameterName);
+
+            // Initial OUT to Dissolve IN
+            createTransition(initialOut, dissolveIn, defaultState ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot, defaultState, parameterName);
+
+            // Dissolve IN to Dissolve OUT
+            createTransition(dissolveIn, dissolveOut, defaultState ? AnimatorConditionMode.IfNot : AnimatorConditionMode.If, defaultState, parameterName);
+
+            // Dissolve OUT to Dissolve IN
+            createTransition(dissolveOut, dissolveIn, defaultState ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot, defaultState, parameterName);
+            return;
+        }
 
         // Simple Toggle
         if (type == "bool" && objectsList.Count == 1)

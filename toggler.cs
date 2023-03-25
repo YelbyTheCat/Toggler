@@ -33,7 +33,7 @@ public class toggler : EditorWindow
 
     //Toolbar
     int toolBar = 0;
-    string[] toolBarSections = { "Bool", "Int" };
+    string[] toolBarSections = { "Bool", "Int", "Dissolve" };
 
     //Simple
     GameObject objectToggle;
@@ -50,11 +50,11 @@ public class toggler : EditorWindow
     int activeIndex = -1;
 
     [MenuItem("Yelby/Toggler")]
-    public static void ShowWindow() { GetWindow<toggler>("Toggler 3.1.2"); }
+    public static void ShowWindow() { GetWindow<toggler>("Toggler 3.2.0"); }
 
     private void OnGUI()
     {
-        GUILayout.Label("Version: 3.1.2");
+        GUILayout.Label("Version: 3.2.0");
 
         toolBar = GUILayout.Toolbar(toolBar, toolBarSections);
 
@@ -153,7 +153,7 @@ public class toggler : EditorWindow
                     createChildFolder(type);
 
                     // Animation
-                    createAnimation(avatar.name, objectsList, "", type, filePath);
+                    createAnimation(avatar.name, objectsList, "", type, filePath, false);
 
                     // Parameters Menu
                     EditorUtility.SetDirty(expressionParameters);
@@ -165,7 +165,7 @@ public class toggler : EditorWindow
                     // FX Menu
                     createFXParameter(controller, objectToggle_bool, objectToggle.name, type);
                     createFXLayer(controller, objectToggle.name);
-                    fillFXLayer(avatar.name, controller, objectToggle.name, objectsList, objectToggle_bool, type, writeDefaults_bool, filePath);
+                    fillFXLayer(avatar.name, controller, objectToggle.name, objectsList, objectToggle_bool, type, writeDefaults_bool, filePath, false);
 
                     // Visibility
                     if (swap)
@@ -234,7 +234,7 @@ public class toggler : EditorWindow
 
                         // Create Animations
                         createAnimation(filePath);
-                        createAnimation(avatar.name, objectsList, parameterName, type, filePath);
+                        createAnimation(avatar.name, objectsList, parameterName, type, filePath, false);
 
                         // Create Parameter
                         EditorUtility.SetDirty(expressionParameters);
@@ -243,7 +243,7 @@ public class toggler : EditorWindow
                         // FX Menu
                         createFXParameter(controller, objectToggle_bool, parameterName, type);
                         createFXLayer(controller, parameterName);
-                        fillFXLayer(avatar.name, controller, parameterName, objectsList, true, type, writeDefaults_bool, filePath);
+                        fillFXLayer(avatar.name, controller, parameterName, objectsList, true, type, writeDefaults_bool, filePath, false);
 
                         // Visibility
                         setVisibility(objectsList);
@@ -256,6 +256,66 @@ public class toggler : EditorWindow
                     }
 
                 ui_ObjectInformation();
+
+                break;
+            case 2:
+                objectToggle = EditorGUILayout.ObjectField("Object: ", objectToggle, typeof(GameObject), true) as GameObject;
+                if (objectToggle == null) return;
+
+                menu = EditorGUILayout.ObjectField("VRC Menu: ", menu, typeof(VRCMenu), true) as VRCMenu;
+                if (menu != null)
+                {
+                    if (menu.controls.Count >= VRCMenu.MAX_CONTROLS) menu = null;
+                    if (menu != null) EditorGUILayout.LabelField((menu.controls.Count + 1) + "/" + VRCMenu.MAX_CONTROLS, GUILayout.MaxWidth(25));
+                }
+
+                options = EditorGUILayout.Foldout(options, "Options");
+                if (options)
+                {
+                    GUILayout.BeginVertical();
+                    if (!swap) unityVisible_bool = EditorGUILayout.Toggle("Unity ON", unityVisible_bool);
+                    objectToggle_bool = EditorGUILayout.Toggle("Default ON", objectToggle_bool);
+                    isParameterOn_bool = EditorGUILayout.Toggle("OFF is Spinning", isParameterOn_bool);
+                    saveState_bool = EditorGUILayout.Toggle("Save", saveState_bool);
+                    writeDefaults_bool = EditorGUILayout.Toggle("Write defaults", writeDefaults_bool);
+                    GUILayout.EndVertical();
+                }
+
+                if (GUILayout.Button("Create Toggle"))
+                {
+                    objectsList = new List<ObjectInformation>();
+                    ObjectInformation objectInfo = new ObjectInformation { item = objectToggle, isUnity = true };
+                    if (menu != null) objectInfo.menu = menu;
+                    objectsList.Add(objectInfo);
+
+                    string type = "bool";
+
+                    //Folders
+                    createParentFolder();
+                    createChildFolder(type);
+
+                    // Animations
+                    createAnimation(filePath + "/" + avatar.name);
+                    createAnimation(avatar.name, objectsList, "", type, filePath, true);
+
+                    // Parameters Menus
+                    EditorUtility.SetDirty(expressionParameters);
+                    if (isParameterOn_bool)
+                        createParameter(expressionParameters, objectToggle.name, !objectToggle_bool ? 1.0f : 0.0f, saveState_bool, type);
+                    else
+                        createParameter(expressionParameters, objectToggle.name, objectToggle_bool ? 1.0f : 0.0f, saveState_bool, type);
+
+                    // FX Menu
+                    createFXParameter(controller, objectToggle_bool, objectToggle.name, type);
+                    createFXLayer(controller, objectToggle.name);
+                    fillFXLayer(avatar.name, controller, objectToggle.name, objectsList, !isParameterOn_bool, type, writeDefaults_bool, filePath, true);
+
+                    // Visibility
+                    objectToggle.SetActive(unityVisible_bool);
+
+                    // Adding Menu
+                    addParameterMenuEntry(objectsList, objectToggle.name, type);
+                }
 
                 break;
         }
