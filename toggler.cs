@@ -16,6 +16,8 @@ using UnityEditor.Animations;
  */
 public class toggler : EditorWindow
 {
+    static string version = "3.2.2";
+
     // Global
     GameObject avatar = null;
     ExpressionParameters expressionParameters = null;
@@ -50,11 +52,11 @@ public class toggler : EditorWindow
     int activeIndex = -1;
 
     [MenuItem("Yelby/Toggler")]
-    public static void ShowWindow() { GetWindow<toggler>("Toggler 3.2.0"); }
+    public static void ShowWindow() { GetWindow<toggler>("Toggler " + version); }
 
     private void OnGUI()
     {
-        GUILayout.Label("Version: 3.2.0");
+        GUILayout.Label("Version: " + version);
 
         toolBar = GUILayout.Toolbar(toolBar, toolBarSections);
 

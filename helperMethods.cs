@@ -53,7 +53,7 @@ public class helperMethods
                     Keyframe[] dissolveKeys = new Keyframe[2];
                     dissolveKeys[0] = new Keyframe(0.0f, (toggle ? 1.0f : 0.0f));
                     dissolveKeys[1] = new Keyframe(1.0f, (toggle ? 0.0f : 1.0f));
-                    clip.SetCurve(objectPath, typeof(MeshRenderer), "material._DissolveAlpha", new AnimationCurve(dissolveKeys));
+                    clip.SetCurve(objectPath, typeof(SkinnedMeshRenderer), "material._DissolveAlpha", new AnimationCurve(dissolveKeys));
 
                     // End
                     AssetDatabase.CreateAsset(clip, filePath + "/Dissolve_" + item.name + (toggle ? "_IN" : "_OUT") + ".anim");
@@ -76,7 +76,7 @@ public class helperMethods
                     // Dissolve
                     Keyframe[] dissolveKeys = new Keyframe[2];
                     dissolveKeys[0] = new Keyframe(0.0f, toggle ? 0.0f : 1.0f);
-                    clip.SetCurve(objectPath, typeof(MeshRenderer), "material._DissolveAlpha", new AnimationCurve(dissolveKeys));
+                    clip.SetCurve(objectPath, typeof(SkinnedMeshRenderer), "material._DissolveAlpha", new AnimationCurve(dissolveKeys));
 
                     // End
                     AssetDatabase.CreateAsset(clip, filePath + "/Dissolve_Initial_" + item.name + (toggle ? "_IN" : "_OUT") + ".anim");
@@ -274,7 +274,7 @@ public class helperMethods
         string path = filePath + "/" + avatarName + "/" + type + "/";
 
         // Simple Toggle Dissolve
-        if (type == "bool" && objectsList.Count == 1)
+        if (type == "bool" && objectsList.Count == 1 && dissolve)
         {
             stateMachine.anyStatePosition = new Vector3(50, 80);
             stateMachine.entryPosition = new Vector3(50, 120);
