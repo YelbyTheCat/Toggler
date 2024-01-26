@@ -72,6 +72,3 @@ For this button to be 'live' the following is required:
 ## Known Issues
  - Having an extra space on the end of your AVATAR name will cause it to fail (IE |yelby | will fail |yelby| will work, ignore |)
  - Having any of the following will cause creation to fail / \ . ? * : " < >
-
-## Discord Server
-[Only Cats] (https://discord.gg/Xgn8zK3zb7)
